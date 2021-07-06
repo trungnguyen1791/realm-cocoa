@@ -344,6 +344,7 @@ class SwiftEmployeeObject: Object {
 }
 
 class SwiftCompanyObject: Object {
+    @objc dynamic var title = ""
     let employees = List<SwiftEmployeeObject>()
     let employeeSet = MutableSet<SwiftEmployeeObject>()
     let employeeMap = Map<String, SwiftEmployeeObject?>()
