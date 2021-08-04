@@ -486,10 +486,24 @@ static void RLMInsertObject(RLMManagedArray *ar, id object, NSUInteger index) {
     });
 }
 
-- (NSArray *)objectsAtIndexes:(__unused NSIndexSet *)indexes {
-    // FIXME: this is called by KVO when array changes are made. It's not clear
-    // why, and returning nil seems to work fine.
-    return nil;
+- (NSArray *)objectsAtIndexes:(NSIndexSet *)indexes {
+    size_t c = self.count;
+    NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity:indexes.count];
+    NSUInteger i = [indexes firstIndex];
+    RLMAccessorContext context(*_objectInfo);
+    while (i != NSNotFound) {
+        // Given KVO relies on `objectsAtIndexes` we need to make sure
+        // that no out of bounds exceptions are generated. This disallows us to mirror
+        // the exception logic in Foundation, but it is better than nothing.
+        if (i >= 0 && i < c) {
+            [result addObject:_backingList.get(context, i)];
+        } else {
+            // silently abort.
+            return nil;
+        }
+        i = [indexes indexGreaterThanIndex:i];
+    }
+    return result;
 }
 
 - (void)addObserver:(id)observer
@@ -551,10 +565,20 @@ static void RLMInsertObject(RLMManagedArray *ar, id object, NSUInteger index) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmismatched-parameter-types"
 - (RLMNotificationToken *)addNotificationBlock:(void (^)(RLMArray *, RLMCollectionChange *, NSError *))block {
-    return RLMAddNotificationBlock(self, block, nil);
+    return RLMAddNotificationBlock(self, block, nil, nil);
 }
 - (RLMNotificationToken *)addNotificationBlock:(void (^)(RLMArray *, RLMCollectionChange *, NSError *))block queue:(dispatch_queue_t)queue {
-    return RLMAddNotificationBlock(self, block, queue);
+    return RLMAddNotificationBlock(self, block, nil, queue);
+}
+
+- (RLMNotificationToken *)addNotificationBlock:(void (^)(RLMArray *, RLMCollectionChange *, NSError *))block keyPaths:(NSArray<NSString *> *)keyPaths {
+    return RLMAddNotificationBlock(self, block, keyPaths,nil);
+}
+
+- (RLMNotificationToken *)addNotificationBlock:(void (^)(RLMArray *, RLMCollectionChange *, NSError *))block
+                                      keyPaths:(NSArray<NSString *> *)keyPaths
+                                         queue:(dispatch_queue_t)queue {
+    return RLMAddNotificationBlock(self, block, keyPaths, queue);
 }
 #pragma clang diagnostic pop
 

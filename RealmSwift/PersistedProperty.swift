@@ -41,8 +41,8 @@ import Realm.Private
 ///     @Persisted(indexed: true) var indexedString: String
 ///
 ///     // Properties can set as the class's primary key by
-///     // passing `primary: true` to the initializer
-///     @Persisted(primary: true) var _id: ObjectId
+///     // passing `primaryKey: true` to the initializer
+///     @Persisted(primaryKey: true) var _id: ObjectId
 ///
 ///     // List and set properties should always be declared
 ///     // with `: List` rather than `= List()`
@@ -65,7 +65,7 @@ import Realm.Private
 ///  performance of equality queries on that property, at the cost of slightly
 ///  worse write performance. No other operations currently use the index.
 ///
-///  A property can be set as the class's primary key by passing `primary: true`
+///  A property can be set as the class's primary key by passing `primaryKey: true`
 ///  to the initializer. Compound primary keys are not supported, and setting
 ///  more than one property as the primary key will throw an exception at
 ///  runtime. Only Int, String, UUID and ObjectID properties can be made the
@@ -250,6 +250,24 @@ extension Persisted: Encodable where Value: Encodable {
             throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: "Only unmanaged Realm objects can be encoded using automatic Codable synthesis. You must explicitly define encode(to:) on your model class to support managed Realm objects."))
         }
     }
+}
+
+/// :nodoc:
+/// Protocol for a PropertyWrapper to properly handle Coding when the wrappedValue is Optional
+public protocol OptionalCodingWrapper {
+    associatedtype WrappedType: ExpressibleByNilLiteral
+    init(wrappedValue: WrappedType)
+}
+
+/// :nodoc:
+extension KeyedDecodingContainer {
+    // This is used to override the default decoding behaviour for OptionalCodingWrapper to allow a value to avoid a missing key Error
+    public func decode<T>(_ type: T.Type, forKey key: KeyedDecodingContainer<K>.Key) throws -> T where T: Decodable, T: OptionalCodingWrapper {
+        return try decodeIfPresent(T.self, forKey: key) ?? T(wrappedValue: nil)
+    }
+}
+
+extension Persisted: OptionalCodingWrapper where Value: ExpressibleByNilLiteral {
 }
 
 /**
