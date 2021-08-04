@@ -303,6 +303,7 @@ let package = Package(
                 "SwiftObjectServerTests.swift",
                 "SwiftCollectionSyncTests.swift",
                 "SwiftObjectServerPartitionTests.swift",
+                "SwiftMongoClientTests.swift"
             ]
         ),
         objectServerTestTarget(
